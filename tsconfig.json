@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "types": [
+      "react/next",
+      "react-dom/next"
+    ],
+    "lib": [
+      "dom",
+      "ESNext"
+    ],
+    "esModuleInterop": true,
+    "isolatedModules": true,
+    "jsx": "preserve"
+  },
+}
