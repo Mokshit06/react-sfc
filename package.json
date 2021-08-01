@@ -4,7 +4,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "node scripts/build && concurrently \"WATCH=true node scripts/build\" \"nodemon --watch build --quiet --enable-source-maps build/server.js\""
+    "dev": "node scripts/build && concurrently \"WATCH=true node build/build\" \"nodemon --watch build --quiet --enable-source-maps dist/server.js\""
   },
   "dependencies": {
     "chalk": "^4.1.1",
@@ -18,12 +18,14 @@
   "devDependencies": {
     "@babel/core": "^7.14.8",
     "@babel/preset-env": "^7.14.9",
+    "@babel/preset-typescript": "^7.14.5",
     "@types/babel__core": "^7.1.15",
     "@types/compression": "^1.7.0",
     "@types/express": "^4.17.12",
     "@types/node": "^15.12.2",
     "@types/react": "^17.0.10",
     "@types/react-dom": "^17.0.7",
+    "babel-plugin-danger-remove-unused-import": "^2.0.0",
     "esbuild": "^0.12.8",
     "nodemon": "^2.0.7",
     "typescript": "^4.3.2"

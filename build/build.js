@@ -2,6 +2,7 @@
 const esbuild = require('esbuild');
 const fs = require('fs').promises;
 const babel = require('@babel/core');
+const loaderTransform = require('./babel');
 
 const watch = process.env.WATCH === 'true';
 const minify = process.env.MINIFY === 'true';
@@ -12,7 +13,7 @@ const metafilePlugin = {
   setup(build) {
     build.onEnd(async ({ metafile }) => {
       await fs.writeFile(
-        'build/metafile.json',
+        'dist/metafile.json',
         JSON.stringify(metafile, null, 2),
         'utf8'
       );
@@ -25,18 +26,14 @@ const cjsPlugin = {
   name: 'esm-to-cjs',
   setup(build) {
     build.onEnd(async result => {
-      // conver esm to cjs
       await Promise.all(
         Object.keys(result.metafile.outputs).map(async file => {
+          // conver esm to cjs
           const { code } = await babel.transformFileAsync(file, {
             presets: [
               ['@babel/preset-env', { targets: 'defaults, not ie 11' }],
             ],
           });
-          // const { code } = await esbuild.transform(
-          //   await fs.readFile(file, 'utf8'),
-          //   { format: 'cjs' }
-          // );
 
           await fs.writeFile(file, code, 'utf8');
         })
@@ -45,11 +42,34 @@ const cjsPlugin = {
   },
 };
 
+/** @type {esbuild.Plugin} */
+const loaderPlugin = {
+  name: 'loader-plugin',
+  setup(build) {
+    build.onLoad({ filter: /\.(j|t)sx?/ }, async args => {
+      const path = args.path.replace(new RegExp(`^${process.cwd()}/`), '');
+
+      if (path.startsWith('node_modules')) return;
+
+      const result = await babel.transformFileAsync(args.path, {
+        presets: ['@babel/preset-typescript'],
+        plugins: [loaderTransform, 'babel-plugin-danger-remove-unused-import'],
+        sourceMaps: 'inline',
+      });
+
+      return {
+        contents: result.code,
+        loader: 'tsx',
+      };
+    });
+  },
+};
+
 /** @type {esbuild.BuildOptions} */
 const commonConfig = {
   watch,
   bundle: true,
-  inject: ['scripts/react-shim.js'],
+  inject: ['build/react-shim.js'],
   minify,
 };
 
@@ -66,6 +86,7 @@ Promise.all([
     define: {
       'process.env.SERVER': 'false',
     },
+    plugins: [loaderPlugin],
   }),
   esbuild.build({
     ...commonConfig,
@@ -74,7 +95,7 @@ Promise.all([
     platform: 'node',
     format: 'esm',
     splitting: true,
-    outdir: 'build',
+    outdir: 'dist',
     metafile: true,
     external: [
       'react',
