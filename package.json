@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server",
     "build": "MINIFY=true node build/build",
-    "dev": "node build/build && concurrently \"WATCH=true node build/build\" \"nodemon --watch build --quiet --enable-source-maps dist/server.js\""
+    "dev": "node build/build && concurrently \"WATCH=true node build/build\" \"nodemon --watch dist --quiet --enable-source-maps dist/server.js\""
   },
   "dependencies": {
     "chalk": "^4.1.1",

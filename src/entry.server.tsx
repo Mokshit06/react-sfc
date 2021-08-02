@@ -14,7 +14,14 @@ const app = express();
 
 app.use(compression());
 
-app.use(express.static('public'));
+app.use(async (req, res, next) => {
+  // if (req.path.includes('home') && req.path.includes('css')) {
+  //   // block css request for 3s
+  //   await new Promise(resolve => setTimeout(resolve, 3000));
+  // }
+
+  express.static('public')(req, res, next);
+});
 
 const errHandler = error => {
   console.error('Fatal', error);
@@ -56,13 +63,18 @@ app.get('*', async (req, res) => {
   res.socket.on('error', errHandler);
   let didError = false;
 
+  // const stream = new Writable({
+  //   write(chunk, encoding, callback) {
+  //     callback();
+  //   },
+  // });
+
   const { startWriting, abort } = pipeToNodeWritable(<App />, res, {
     onReadyToStream() {
       res.statusCode = didError ? 500 : 200;
       res.setHeader('Content-type', 'text/html');
       res.write('<!DOCTYPE html>');
       startWriting();
-      res.socket.off('error', errHandler);
     },
     onError(err) {
       didError = true;
@@ -70,7 +82,9 @@ app.get('*', async (req, res) => {
     },
   });
 
-  setTimeout(abort, 10000);
+  res.socket.off('error', errHandler);
+
+  setTimeout(abort, 5000);
 });
 
 app.listen(5000, () => {

@@ -20,7 +20,7 @@ export async function loader() {
 
 const resource = wrapPromise(loader());
 
-// no-runtime css
+// zero-runtime css
 export const styles = css`
   .heading {
     color: red;
@@ -32,9 +32,10 @@ export default function Home() {
 
   return (
     <>
+      <styles.link />
       <h1 className={styles.heading}>Home</h1>
       <pre>{text}</pre>
-      <Suspense fallback={null}>
+      <Suspense fallback="Loading..">
         <Posts />
       </Suspense>
     </>

@@ -64,15 +64,29 @@ const stylePlugin = ({ isClient } = { isClient: false }) => ({
     build.onResolve({ filter: /\.sfc\.css$/ }, args => {
       return {
         namespace: 'sfc-css',
-        path: args.path,
+        path: path.join(args.resolveDir, cssLookup.get(args.path).name),
+        pluginData: {
+          path: args.path,
+        },
       };
     });
 
     build.onLoad({ filter: /.*/, namespace: 'sfc-css' }, async args => {
+      const data = cssLookup.get(args.pluginData.path);
+
+      const result = await esbuild.build({
+        stdin: {
+          contents: data.css,
+          resolveDir: path.parse(args.path).dir,
+          loader: 'css',
+        },
+        bundle: true,
+        write: false,
+      });
+
       return {
-        contents: cssLookup.get(args.path),
-        loader: 'css',
-        resolveDir: path.basename(args.path),
+        contents: result.outputFiles[0].text,
+        loader: 'file',
       };
     });
 
@@ -112,12 +126,13 @@ const stylePlugin = ({ isClient } = { isClient: false }) => ({
 
       const hash = murmurhash.v2(css.css);
       const cssFilename = `${parsed.name}_${hash}.sfc.css`;
+      const cssFilePath = cssFilename;
 
-      cssLookup.set(cssFilename, css.css);
+      cssLookup.set(cssFilePath, { css: css.css, name: `${parsed.name}.css` });
 
       return {
         contents: `
-        import ${JSON.stringify(cssFilename)};
+        import __cssFileUrl__ from ${JSON.stringify(cssFilePath)};
         ${result.code}`,
         loader: 'tsx',
       };
@@ -131,6 +146,7 @@ const commonConfig = {
   bundle: true,
   inject: ['build/react-shim.js'],
   minify,
+  assetNames: 'assets/[name]-[hash]',
 };
 
 Promise.all([
@@ -140,9 +156,8 @@ Promise.all([
     platform: 'browser',
     format: 'esm',
     splitting: true,
-    outdir: 'public/build',
+    outdir: 'public/dist',
     sourcemap: true,
-    publicPath: '/build',
     define: {
       'process.env.SERVER': 'false',
     },

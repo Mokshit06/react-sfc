@@ -37,11 +37,60 @@ function styleTransform({ types: t }) {
           css: result.css,
         };
 
-        const classesDeclaration = t.objectExpression(
-          Object.entries(classes).map(([name, hash]) =>
-            t.objectProperty(t.identifier(name), t.stringLiteral(hash))
-          )
-        );
+        const classesDeclaration = t.objectExpression([
+          ...Object.entries(classes)
+            .filter(([name]) => name !== 'link')
+            .map(([name, hash]) =>
+              t.objectProperty(t.identifier(name), t.stringLiteral(hash))
+            ),
+          // props => <link {...props} rel="stylesheet" href="HASH" />
+          t.objectProperty(
+            t.identifier('link'),
+            t.functionExpression(
+              null,
+              [t.identifier('props')],
+              t.blockStatement([
+                t.returnStatement(
+                  t.jsxElement(
+                    t.jsxOpeningElement(
+                      t.jsxIdentifier('link'),
+                      [
+                        t.jsxSpreadAttribute(t.identifier('props')),
+                        t.jsxAttribute(
+                          t.jsxIdentifier('rel'),
+                          t.stringLiteral('stylesheet')
+                        ),
+                        t.jsxAttribute(
+                          t.jsxIdentifier('href'),
+                          t.jsxExpressionContainer(
+                            t.templateLiteral(
+                              [
+                                t.templateElement({ raw: '/dist' }, false),
+                                t.templateElement({ raw: '' }, true),
+                              ],
+                              [
+                                t.callExpression(
+                                  t.memberExpression(
+                                    t.identifier('__cssFileUrl__'),
+                                    t.identifier('slice')
+                                  ),
+                                  [t.numericLiteral(1)]
+                                ),
+                              ]
+                            )
+                          )
+                        ),
+                      ],
+                      true
+                    ),
+                    null,
+                    []
+                  )
+                ),
+              ])
+            )
+          ),
+        ]);
 
         path.replaceWith(classesDeclaration);
       },

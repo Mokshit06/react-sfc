@@ -1,12 +1,22 @@
 import { lazy, Suspense } from 'react';
+import css from './utils/css';
 
 const Home = lazy(() => import('./pages/home'));
+
+export const styles = css`
+  /* import css files */
+  @import './styles/global.css';
+
+  .link {
+    color: blue;
+  }
+`;
 
 export default function App() {
   return (
     <html>
       <head>
-        <link rel="stylesheet" href="/build/entry.client.css" />
+        <styles.link />
       </head>
       <body>
         <div id="app">
@@ -15,7 +25,7 @@ export default function App() {
             <Home />
           </Suspense>
         </div>
-        <script src="/build/entry.client.js" type="module" />
+        <script src="/dist/entry.client.js" type="module" />
       </body>
     </html>
   );
