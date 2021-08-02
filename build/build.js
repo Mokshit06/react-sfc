@@ -40,11 +40,13 @@ const cjsPlugin = {
           .filter(file => file.endsWith('.js'))
           .map(async file => {
             // conver esm to cjs
-            const { code } = await babel.transformFileAsync(file, {
-              presets: [
-                ['@babel/preset-env', { targets: 'defaults, not ie 11' }],
-              ],
-            });
+            const { code } = await esbuild.transform(
+              await fs.readFile(file, 'utf8'),
+              {
+                target: 'node12',
+                format: 'cjs',
+              }
+            );
 
             await fs.writeFile(file, code, 'utf8');
           })

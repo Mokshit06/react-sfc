@@ -12,6 +12,7 @@ function styleTransform({ types: t }) {
   return {
     name: 'style-transform',
     visitor: {
+      // TODO only transform exported styles
       TaggedTemplateExpression(path, state) {
         /** @type {any} */
         const tag = path.get('tag').node;
