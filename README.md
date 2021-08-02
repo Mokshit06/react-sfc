@@ -8,25 +8,37 @@ Most apps use Next.js or a similar framework for server rendering. These framewo
 
 By adding an intermediate build step, we can make a pattern similar to Single File Components in React. The component can describe its own data dependencies in its own file and seperate bundles can be produced for the server and client. In the client code, the `loader` will be replaced with a function that fetches a path with the file name in it, and the server `loader` will stay as is. Both of these loaders will be wrapped in a function that throws a promise if the function hasn't returned a value yet, which the `<Suspense>` boundary can catch and show the fallback component. This way, only the components that are being rendered on the page will fetch the data and these loaders should be able to use any native node modules.
 
-This pattern can be extended to allow styles to be written in the same file as well.
+This pattern also allows styles to be defined in the component itself and it gets hashed and extracted at build time.
 
 ## Example
 
 Example React SFC:
 
 ```js
-import { read } from 'lib';
+import { wrapPromise } from '../utils/wrap-promise';
+import { css } from '../utils/css';
 
+// this gets removed from the client bundle
 export async function loader() {
   return {
     hello: 'world',
   };
 }
 
-export function Component(props) {
-  const { hello } = read<typeof loader>();
+const resource = wrapPromise(loader());
 
-  return <h1>{hello}</h1>;
+// this string gets parsed by the css parser
+// it can have any valid css-module syntax
+export const styles = css`
+  .heading {
+    color: red;
+  }
+`;
+
+export default function Component(props) {
+  const { hello } = resource.read();
+
+  return <h1 className={styles.heading}>{hello}</h1>;
 }
 ```
 
@@ -35,41 +47,52 @@ Compiled output:
 - Server:-
 
   ```js
+  import 'heading_HASH.css';
   import { wrapPromise } from 'lib';
 
-  const resource = wrapPromise(loader());
-
-  async function loader() {
+  export async function loader() {
     return {
       hello: 'world',
     };
   }
 
+  const resource = wrapPromise(loader());
+
+  export const styles = {
+    heading: 'heading_HASH',
+  };
+
   export function Component(props) {
     const { hello } = resource.read();
 
-    return <h1>{hello}</h1>;
+    return <h1 className={styles.heading}>{hello}</h1>;
   }
   ```
 
 - Client:-
 
   ```js
+  import 'heading_HASH.css';
   import { wrapPromise } from 'lib';
 
-  const resource = wrapPromise(loader());
-
+  // server code gets removed
   async function loader() {
-    const res = await fetch('/api/src/filepath.tsx');
+    const res = await fetch('/api/src/components/file.tsx');
     const data = await res.json();
 
     return data;
   }
 
+  const resource = wrapPromise(loader());
+
+  export const styles = {
+    heading: 'heading_HASH',
+  };
+
   export function Component(props) {
     const { hello } = resource.read();
 
-    return <h1>{hello}</h1>;
+    return <h1 className={styles.heading}>{hello}</h1>;
   }
   ```
 

@@ -41,11 +41,15 @@ app.get('/api/*', async (req, res) => {
   }
 
   const [outfile] = file;
-  const mod = require(`../${outfile}`);
+  try {
+    const mod = require(`../${outfile}`);
+    const data = await mod.loader();
 
-  const data = await mod.loader();
-
-  res.send(data);
+    res.send(data);
+  } catch (error) {
+    console.log(error);
+    res.status(500).send(error);
+  }
 });
 
 app.get('*', async (req, res) => {

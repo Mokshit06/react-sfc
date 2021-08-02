@@ -2,7 +2,10 @@
 const esbuild = require('esbuild');
 const fs = require('fs').promises;
 const babel = require('@babel/core');
-const loaderTransform = require('./babel');
+const loaderTransform = require('./babel/loader');
+const styleTransform = require('./babel/styles');
+const murmurhash = require('murmurhash');
+const path = require('path');
 
 const watch = process.env.WATCH === 'true';
 const minify = process.env.MINIFY === 'true';
@@ -12,6 +15,10 @@ const metafilePlugin = {
   name: 'write-metafile',
   setup(build) {
     build.onEnd(async ({ metafile }) => {
+      build.initialOptions.metafile = true;
+
+      if (!metafile) return;
+
       await fs.writeFile(
         'dist/metafile.json',
         JSON.stringify(metafile, null, 2),
@@ -26,44 +33,95 @@ const cjsPlugin = {
   name: 'esm-to-cjs',
   setup(build) {
     build.onEnd(async result => {
-      await Promise.all(
-        Object.keys(result.metafile.outputs).map(async file => {
-          // conver esm to cjs
-          const { code } = await babel.transformFileAsync(file, {
-            presets: [
-              ['@babel/preset-env', { targets: 'defaults, not ie 11' }],
-            ],
-          });
+      if (!result.metafile) return;
 
-          await fs.writeFile(file, code, 'utf8');
-        })
+      await Promise.all(
+        Object.keys(result.metafile.outputs)
+          .filter(file => file.endsWith('.js'))
+          .map(async file => {
+            // conver esm to cjs
+            const { code } = await babel.transformFileAsync(file, {
+              presets: [
+                ['@babel/preset-env', { targets: 'defaults, not ie 11' }],
+              ],
+            });
+
+            await fs.writeFile(file, code, 'utf8');
+          })
       );
     });
   },
 };
 
-/** @type {esbuild.Plugin} */
-const loaderPlugin = {
-  name: 'loader-plugin',
+/** @type {(opts?: {isClient:boolean}) => esbuild.Plugin} */
+const stylePlugin = ({ isClient } = { isClient: false }) => ({
+  name: 'style-plugin',
   setup(build) {
-    build.onLoad({ filter: /\.(j|t)sx?/ }, async args => {
-      const path = args.path.replace(new RegExp(`^${process.cwd()}/`), '');
+    const cssLookup = new Map();
 
-      if (path.startsWith('node_modules')) return;
+    build.onResolve({ filter: /\.sfc\.css$/ }, args => {
+      return {
+        namespace: 'sfc-css',
+        path: args.path,
+      };
+    });
+
+    build.onLoad({ filter: /.*/, namespace: 'sfc-css' }, async args => {
+      return {
+        contents: cssLookup.get(args.path),
+        loader: 'css',
+        resolveDir: path.basename(args.path),
+      };
+    });
+
+    build.onLoad({ filter: /\.(j|t)sx?$/ }, async args => {
+      const parsed = path.parse(args.path);
+      const pathWithoutCwd = args.path.replace(
+        new RegExp(`^${process.cwd()}/`),
+        ''
+      );
+
+      if (pathWithoutCwd.startsWith('node_modules')) return;
+
+      /** @type {babel.PluginItem[]} */
+      const plugins = [styleTransform];
+
+      if (isClient) {
+        plugins.push(
+          loaderTransform,
+          'babel-plugin-danger-remove-unused-import'
+        );
+      }
 
       const result = await babel.transformFileAsync(args.path, {
         presets: ['@babel/preset-typescript'],
-        plugins: [loaderTransform, 'babel-plugin-danger-remove-unused-import'],
+        plugins,
         sourceMaps: 'inline',
       });
 
+      const { css } = result.metadata;
+
+      if (!css) {
+        return {
+          contents: result.code,
+          loader: 'tsx',
+        };
+      }
+
+      const hash = murmurhash.v2(css.css);
+      const cssFilename = `${parsed.name}_${hash}.sfc.css`;
+
+      cssLookup.set(cssFilename, css.css);
+
       return {
-        contents: result.code,
+        contents: `
+        import ${JSON.stringify(cssFilename)};
+        ${result.code}`,
         loader: 'tsx',
       };
     });
   },
-};
+});
 
 /** @type {esbuild.BuildOptions} */
 const commonConfig = {
@@ -86,7 +144,7 @@ Promise.all([
     define: {
       'process.env.SERVER': 'false',
     },
-    plugins: [loaderPlugin],
+    plugins: [stylePlugin({ isClient: true })],
   }),
   esbuild.build({
     ...commonConfig,
@@ -108,6 +166,6 @@ Promise.all([
     define: {
       'process.env.SERVER': 'true',
     },
-    plugins: [metafilePlugin, cjsPlugin],
+    plugins: [stylePlugin(), metafilePlugin, cjsPlugin],
   }),
 ]).catch(() => process.exit(0));

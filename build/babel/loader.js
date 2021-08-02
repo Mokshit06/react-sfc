@@ -19,6 +19,7 @@ function loaderTransform(babel) {
         const declarationNode = declaration.node;
 
         if (!declarationNode) return;
+        if (!declarationNode.id) return;
 
         const exportName = declaration.node.id.name;
 
@@ -69,34 +70,5 @@ function loaderTransform(babel) {
     },
   };
 }
-
-function parse() {
-  const result = babel.transformSync(
-    `
-export function loader() {
-  const fs = require('fs');
-  return {fs};
-}
-`,
-    {
-      filename: 'hello.js',
-      plugins: [loaderTransform],
-    }
-  );
-
-  console.log(result.code);
-}
-
-// parse();
-// console.dir(
-//   babel.parse(`
-// async function loader() {
-//   const res = await fetch('/api');
-//   const data = await res.json();
-//   return data;
-// }
-// `),
-//   { depth: 20 }
-// );
 
 module.exports = loaderTransform;
