@@ -1,8 +1,9 @@
-import wrapPromise from 'src/utils/wrap-promise';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { lazy, Suspense } from 'react';
+import { colors } from 'src/theme';
 import css from 'src/utils/css';
+import wrapPromise from 'src/utils/wrap-promise';
 
 const Posts = lazy(() => import('../components/posts'));
 
@@ -23,7 +24,9 @@ const resource = wrapPromise(loader());
 // zero-runtime css
 export const styles = css`
   .heading {
-    color: red;
+    /* interpolate strings and numbers */
+    /* gets evaluated at build time */
+    color: ${colors.primary};
   }
 `;
 

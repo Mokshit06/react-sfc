@@ -5,8 +5,10 @@
   "license": "MIT",
   "scripts": {
     "start": "node dist/server",
-    "build": "MINIFY=true node build/build",
-    "dev": "node build/build && concurrently \"WATCH=true node build/build\" \"nodemon --watch dist --quiet --enable-source-maps dist/server.js\""
+    "build": "yarn clear && MINIFY=true yarn build:dev",
+    "build:dev": "node -r esbuild-register build/build.ts",
+    "dev": "yarn clear && yarn build:dev && concurrently \"WATCH=true yarn build:dev\" \"nodemon --watch dist --quiet --enable-source-maps dist/server.js\"",
+    "clear": "rm -rf dist/* public/dist/*"
   },
   "dependencies": {
     "chalk": "^4.1.1",
@@ -30,6 +32,7 @@
     "@types/react-dom": "^17.0.7",
     "babel-plugin-danger-remove-unused-import": "^2.0.0",
     "esbuild": "^0.12.8",
+    "esbuild-register": "^2.6.0",
     "murmurhash": "^2.0.0",
     "nodemon": "^2.0.7",
     "postcss": "^8.3.6",

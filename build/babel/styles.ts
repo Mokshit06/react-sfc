@@ -1,36 +1,61 @@
-const babel = require('@babel/core');
-const postcss = require('postcss').default;
+import { PluginObj, types as BabelTypes } from '@babel/core';
+import generator from '@babel/generator';
+import postcss from 'postcss';
 
-/** @type {babel.BabelFileMetadata} */
-let b;
-
-/**
- * @param {{types: babel.types}} babel
- * @returns {babel.PluginObj<any>}
- */
-function styleTransform({ types: t }) {
+export default function styleTransform({
+  types: t,
+}: {
+  types: typeof BabelTypes;
+}): PluginObj<any> {
   return {
     name: 'style-transform',
     visitor: {
       // TODO only transform exported styles
       TaggedTemplateExpression(path, state) {
-        /** @type {any} */
-        const tag = path.get('tag').node;
+        const tag = path.get('tag').node as BabelTypes.Identifier;
 
         if (!tag) return;
         if (tag.name !== 'css') return;
 
-        // @ts-ignore
-        const string = path.get('quasi.quasis.0.value.raw').node;
+        const { quasi } = path.node;
+        const expressions = path.get('quasi').get('expressions');
 
-        let classes;
+        let cssText = '';
+
+        quasi.quasis.forEach((el, i) => {
+          cssText += el.value.cooked;
+
+          const ex = expressions[i];
+
+          if (ex && !ex.isExpression()) {
+            throw ex.buildCodeFrameError(
+              `Expression ${generator(ex.node).code} is not supported`
+            );
+          }
+
+          if (ex) {
+            const result = ex.evaluate();
+
+            if (result.confident) {
+              cssText += String(result.value)
+                .replace(/[\r\n]+/g, ' ')
+                .trim();
+            } else {
+              throw ex.buildCodeFrameError(
+                `Expression ${generator(ex.node).code} cannot be evaluated`
+              );
+            }
+          }
+        });
+
+        let classes: Record<string, string>;
         const result = postcss([
           require('postcss-modules-sync').default({
             getJSON(json) {
               classes = json;
             },
           }),
-        ]).process(string, { from: 'my_file.css' });
+        ]).process(cssText, { from: state.filename });
 
         state.file.metadata.css = {
           classes,
@@ -97,5 +122,3 @@ function styleTransform({ types: t }) {
     },
   };
 }
-
-module.exports = styleTransform;

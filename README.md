@@ -17,6 +17,7 @@ Example React SFC:
 ```js
 import { wrapPromise } from '../utils/wrap-promise';
 import { css } from '../utils/css';
+import { colors } from '../theme';
 
 // this gets removed from the client bundle
 export async function loader() {
@@ -31,14 +32,20 @@ const resource = wrapPromise(loader());
 // it can have any valid css-module syntax
 export const styles = css`
   .heading {
-    color: red;
+    /* eval at build time */
+    color: ${colors.primary};
   }
 `;
 
 export default function Component(props) {
   const { hello } = resource.read();
 
-  return <h1 className={styles.heading}>{hello}</h1>;
+  return (
+    <>
+      <styles.link />
+      <h1 className={styles.heading}>{hello}</h1>
+    </>
+  );
 }
 ```
 
@@ -47,8 +54,7 @@ Compiled output:
 - Server:-
 
   ```js
-  import 'heading_HASH.css';
-  import { wrapPromise } from 'lib';
+  import { wrapPromise } from '../utils/wrap-promise';
 
   export async function loader() {
     return {
@@ -60,12 +66,18 @@ Compiled output:
 
   export const styles = {
     heading: 'heading_HASH',
+    link: props => <link {...props} rel="stylesheet" href="css_HASH" />,
   };
 
   export function Component(props) {
     const { hello } = resource.read();
 
-    return <h1 className={styles.heading}>{hello}</h1>;
+    return (
+      <>
+        <styles.link />
+        <h1 className={styles.heading}>{hello}</h1>
+      </>
+    );
   }
   ```
 
@@ -73,7 +85,7 @@ Compiled output:
 
   ```js
   import 'heading_HASH.css';
-  import { wrapPromise } from 'lib';
+  import { wrapPromise } from '../utils/wrap-promise';
 
   // server code gets removed
   async function loader() {
@@ -87,12 +99,18 @@ Compiled output:
 
   export const styles = {
     heading: 'heading_HASH',
+    link: props => <link {...props} rel="stylesheet" href="css_HASH" />,
   };
 
   export function Component(props) {
     const { hello } = resource.read();
 
-    return <h1 className={styles.heading}>{hello}</h1>;
+    return (
+      <>
+        <styles.link />
+        <h1 className={styles.heading}>{hello}</h1>
+      </>
+    );
   }
   ```
 
