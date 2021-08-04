@@ -1,9 +1,9 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 import { lazy, Suspense } from 'react';
-import { colors } from 'src/theme';
-import css from 'src/utils/css';
-import wrapPromise from 'src/utils/wrap-promise';
+import { colors } from '../theme';
+import css from '../utils/css';
+import wrapPromise from '../utils/wrap-promise';
 
 const Posts = lazy(() => import('../components/posts'));
 

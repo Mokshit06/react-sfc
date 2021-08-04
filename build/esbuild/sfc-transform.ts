@@ -64,26 +64,31 @@ const sfcTransform = ({ isClient } = { isClient: false }): Plugin => ({
       });
 
       const { css } = result.metadata as BabelFileMetadata & {
-        css: { css: string; name: string };
+        css: { cssText: string; name: string };
       };
 
-      if (!css) {
+      if (!css.cssText) {
         return {
           contents: result.code,
+          // TODO infer loader
           loader: 'tsx',
         };
       }
 
-      const hash = murmurhash.v2(css.css);
+      const hash = murmurhash.v2(css.cssText);
       const cssFilename = `${parsed.name}_${hash}.sfc.css`;
       const cssFilePath = cssFilename;
 
-      cssLookup.set(cssFilePath, { css: css.css, name: `${parsed.name}.css` });
+      cssLookup.set(cssFilePath, {
+        css: css.cssText,
+        name: `${parsed.name}.css`,
+      });
 
       return {
         contents: `
         import __cssFileUrl__ from ${JSON.stringify(cssFilePath)};
         ${result.code}`,
+        // TODO infer loader
         loader: 'tsx',
       };
     });

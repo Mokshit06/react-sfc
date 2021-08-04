@@ -4,6 +4,8 @@ export default function css(
   strings: TemplateStringsArray,
   ...args: (string | number)[]
 ) {
+  if (process.env.EVAL) return;
+
   throw new Error(
     '`css` function should not exist during runtime. Check your build config. If everything seems fine, then please open an issue'
   );

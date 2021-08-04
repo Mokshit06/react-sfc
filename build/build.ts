@@ -26,6 +26,7 @@ Promise.all([
     sourcemap: true,
     define: {
       'process.env.SERVER': 'false',
+      'process.env.EVAL': 'false',
     },
     plugins: [sfcTransform({ isClient: true })],
   }),
@@ -44,6 +45,7 @@ Promise.all([
     ],
     define: {
       'process.env.SERVER': 'true',
+      'process.env.EVAL': 'false',
     },
     plugins: [sfcTransform(), writeMetafile, esmToCjs],
   }),
