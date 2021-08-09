@@ -1,30 +1,26 @@
-const babel = require('@babel/core');
+import { PluginObj, types as BabelTypes } from '@babel/core';
 
-/**
- * @param {{ types: babel.types }} babel
- * @returns {babel.PluginObj<any>}
- */
-function loaderTransform(babel) {
-  const { types: t } = babel;
-
+export default function loaderTransform({
+  types: t,
+}: {
+  types: typeof BabelTypes;
+}): PluginObj<any> {
   return {
     name: 'loader-transform',
     visitor: {
       ExportNamedDeclaration(path, state) {
-        const declaration =
-          /** @type {babel.NodePath<babel.types.FunctionDeclaration>} */ (
-            path.get('declaration')
-          );
+        const declaration = path.get('declaration');
 
-        const declarationNode = declaration.node;
+        if (
+          !t.isFunctionDeclaration(declaration) ||
+          !t.isFunctionDeclaration(declaration.node)
+        ) {
+          return;
+        }
 
-        if (!declarationNode) return;
-        if (!declarationNode.id) return;
-
-        const exportName = declaration.node.id.name;
+        const exportName = declaration.node?.id?.name;
 
         if (exportName !== 'loader') return;
-        if (!t.isFunctionDeclaration(declaration)) return;
 
         const filename = state.filename.replace(
           new RegExp(`^${process.cwd()}/`),
@@ -70,5 +66,3 @@ function loaderTransform(babel) {
     },
   };
 }
-
-module.exports = loaderTransform;

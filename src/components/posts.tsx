@@ -1,4 +1,4 @@
-import wrapPromise from 'src/utils/wrap-promise';
+import wrapPromise from '../utils/wrap-promise';
 
 export async function loader() {
   const res = await fetch(

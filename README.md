@@ -15,30 +15,40 @@ This pattern also allows styles to be defined in the component itself and it get
 Example React SFC:
 
 ```js
-import { wrapPromise } from '../utils/wrap-promise';
-import { css } from '../utils/css';
+import wrapPromise from '../utils/wrap-promise';
+import css from '../utils/css';
+import { promises as fs } from 'fs';
 
 // this gets removed from the client bundle
 export async function loader() {
+  const data = await fs.readFile('./file.txt', 'utf8');
+
   return {
-    hello: 'world',
+    text: data,
   };
 }
 
 const resource = wrapPromise(loader());
 
+const color = 'red';
+
 // this string gets parsed by the css parser
 // it can have any valid css-module syntax
 export const styles = css`
   .heading {
-    color: red;
+    /* eval at build time */
+    color: ${color};
   }
 `;
 
 export default function Component(props) {
-  const { hello } = resource.read();
+  const { text } = resource.read();
 
-  return <h1 className={styles.heading}>{hello}</h1>;
+  return (
+    <>
+      <h1 className={styles.heading}>{text}</h1>
+    </>
+  );
 }
 ```
 
@@ -47,33 +57,41 @@ Compiled output:
 - Server:-
 
   ```js
-  import 'heading_HASH.css';
-  import { wrapPromise } from 'lib';
+  import 'file_HASH.css';
+  import wrapPromise from '../utils/wrap-promise';
+  import { promises as fs } from 'fs';
 
   export async function loader() {
+    const data = await fs.readFile('./file.txt', 'utf8');
+
     return {
-      hello: 'world',
+      text: data,
     };
   }
 
   const resource = wrapPromise(loader());
 
+  // hashed classes
   export const styles = {
     heading: 'heading_HASH',
   };
 
   export function Component(props) {
-    const { hello } = resource.read();
+    const { text } = resource.read();
 
-    return <h1 className={styles.heading}>{hello}</h1>;
+    return (
+      <>
+        <h1 className={styles.heading}>{text}</h1>
+      </>
+    );
   }
   ```
 
 - Client:-
 
   ```js
-  import 'heading_HASH.css';
-  import { wrapPromise } from 'lib';
+  import 'file_HASH.css';
+  import wrapPromise from '../utils/wrap-promise';
 
   // server code gets removed
   async function loader() {
@@ -90,9 +108,13 @@ Compiled output:
   };
 
   export function Component(props) {
-    const { hello } = resource.read();
+    const { text } = resource.read();
 
-    return <h1 className={styles.heading}>{hello}</h1>;
+    return (
+      <>
+        <h1 className={styles.heading}>{text}</h1>
+      </>
+    );
   }
   ```
 

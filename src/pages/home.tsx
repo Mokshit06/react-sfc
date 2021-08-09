@@ -1,8 +1,8 @@
-import wrapPromise from 'src/utils/wrap-promise';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { lazy, Suspense } from 'react';
-import css from 'src/utils/css';
+import css from '../utils/css';
+import wrapPromise from '../utils/wrap-promise';
 
 const Posts = lazy(() => import('../components/posts'));
 
@@ -20,7 +20,7 @@ export async function loader() {
 
 const resource = wrapPromise(loader());
 
-// no-runtime css
+// zero-runtime css
 export const styles = css`
   .heading {
     color: red;
@@ -34,7 +34,7 @@ export default function Home() {
     <>
       <h1 className={styles.heading}>Home</h1>
       <pre>{text}</pre>
-      <Suspense fallback={null}>
+      <Suspense fallback="Loading..">
         <Posts />
       </Suspense>
     </>
